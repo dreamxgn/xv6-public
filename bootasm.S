@@ -11,31 +11,34 @@
 .globl start
 start:
   cli                         # BIOS enabled interrupts; disable
-
   # Zero data segment registers DS, ES, and SS.
   xorw    %ax,%ax             # Set %ax to zero
   movw    %ax,%ds             # -> Data Segment
   movw    %ax,%es             # -> Extra Segment
   movw    %ax,%ss             # -> Stack Segment
 
-  # Physical address line A20 is tied to zero so that the first PCs 
-  # with 2 MB would run software that assumed 1 MB.  Undo that.
-seta20.1:
-  inb     $0x64,%al               # Wait for not busy
-  testb   $0x2,%al
-  jnz     seta20.1
+#读取e820内存布局
+loade820:
+  mov $start,%sp
+  xor %ebx,%ebx
+  mov %ebx,0x8004 #内存布局块数清0
+  mov $0x9000, %edi #缓冲区用于存放e820内存布局
+.loop:
+    movl $0xE820,%eax
+    movl $0x534D4150,%edx
+    movl $20,%ecx
+    int $0x15
+    jc .done
+    cmpl $0x534D4150,%eax
+    jne .done
+    
+    add $20,%di
+    inc 0x8004 #内存布局块数+1
+    test %ebx,%ebx
+    jnz .loop
 
-  movb    $0xd1,%al               # 0xd1 -> port 0x64
-  outb    %al,$0x64
-
-seta20.2:
-  inb     $0x64,%al               # Wait for not busy
-  testb   $0x2,%al
-  jnz     seta20.2
-
-  movb    $0xdf,%al               # 0xdf -> port 0x60
-  outb    %al,$0x60
-
+.done:
+  mov $0x9000,0x8000
   # Switch from real to protected mode.  Use a bootstrap GDT that makes
   # virtual addresses map directly to physical addresses so that the
   # effective memory map doesn't change during the transition.
@@ -63,6 +66,7 @@ start32:
 
   # Set up the stack pointer and call into C.
   movl    $start, %esp
+  push $0x8000
   call    bootmain
 
   # If bootmain returns (it shouldn't), trigger a Bochs
@@ -75,6 +79,7 @@ start32:
 spin:
   jmp     spin
 
+
 # Bootstrap GDT
 .p2align 2                                # force 4 byte alignment
 gdt:
@@ -85,4 +90,3 @@ gdt:
 gdtdesc:
   .word   (gdtdesc - gdt - 1)             # sizeof(gdt) - 1
   .long   gdt                             # address gdt
-

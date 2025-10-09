@@ -26,7 +26,8 @@
 #include "fs.h"
 #include "buf.h"
 
-struct {
+struct
+{
   struct spinlock lock;
   struct buf buf[NBUF];
 
@@ -35,18 +36,18 @@ struct {
   struct buf head;
 } bcache;
 
-void
-binit(void)
+void binit(void)
 {
   struct buf *b;
 
   initlock(&bcache.lock, "bcache");
 
-//PAGEBREAK!
-  // Create linked list of buffers
+  // PAGEBREAK!
+  //  初始化链表
   bcache.head.prev = &bcache.head;
   bcache.head.next = &bcache.head;
-  for(b = bcache.buf; b < bcache.buf+NBUF; b++){
+  for (b = bcache.buf; b < bcache.buf + NBUF; b++)
+  {
     b->next = bcache.head.next;
     b->prev = &bcache.head;
     initsleeplock(&b->lock, "buffer");
@@ -58,16 +59,24 @@ binit(void)
 // Look through buffer cache for block on device dev.
 // If not found, allocate a buffer.
 // In either case, return locked buffer.
-static struct buf*
+/**
+ * 从缓冲区缓存中获取指定设备和块号的缓冲区
+ * @param dev 设备号
+ * @param blockno 块号
+ * @return 指向缓冲区结构体的指针
+ */
+static struct buf *
 bget(uint dev, uint blockno)
 {
   struct buf *b;
 
   acquire(&bcache.lock);
 
-  // Is the block already cached?
-  for(b = bcache.head.next; b != &bcache.head; b = b->next){
-    if(b->dev == dev && b->blockno == blockno){
+  // 查找请求的块是否已经在缓存中
+  for (b = bcache.head.next; b != &bcache.head; b = b->next)
+  {
+    if (b->dev == dev && b->blockno == blockno)
+    {
       b->refcnt++;
       release(&bcache.lock);
       acquiresleep(&b->lock);
@@ -75,11 +84,13 @@ bget(uint dev, uint blockno)
     }
   }
 
-  // Not cached; recycle an unused buffer.
-  // Even if refcnt==0, B_DIRTY indicates a buffer is in use
-  // because log.c has modified it but not yet committed it.
-  for(b = bcache.head.prev; b != &bcache.head; b = b->prev){
-    if(b->refcnt == 0 && (b->flags & B_DIRTY) == 0) {
+  // 块未被缓存，尝试回收一个未使用的缓冲区
+  // 即使refcnt为0，如果B_DIRTY标志被设置，表示该缓冲区正在被日志系统使用，
+  // 因为log.c已经修改了它但还没有提交
+  for (b = bcache.head.prev; b != &bcache.head; b = b->prev)
+  {
+    if (b->refcnt == 0 && (b->flags & B_DIRTY) == 0)
+    {
       b->dev = dev;
       b->blockno = blockno;
       b->flags = 0;
@@ -93,23 +104,33 @@ bget(uint dev, uint blockno)
 }
 
 // Return a locked buf with the contents of the indicated block.
-struct buf*
+/*
+ * 从磁盘读取指定块到缓冲区
+ * @param dev: 设备号
+ * @param blockno: 块号
+ * @return: 指向包含数据的缓冲区结构体指针
+ */
+struct buf *
 bread(uint dev, uint blockno)
 {
   struct buf *b;
 
+  // 获取指定设备和块号的缓冲区
   b = bget(dev, blockno);
-  if((b->flags & B_VALID) == 0) {
+
+  // 如果缓冲区数据无效，则从磁盘读取数据
+  if ((b->flags & B_VALID) == 0)
+  {
     iderw(b);
   }
+
   return b;
 }
 
 // Write b's contents to disk.  Must be locked.
-void
-bwrite(struct buf *b)
+void bwrite(struct buf *b)
 {
-  if(!holdingsleep(&b->lock))
+  if (!holdingsleep(&b->lock))
     panic("bwrite");
   b->flags |= B_DIRTY;
   iderw(b);
@@ -117,17 +138,17 @@ bwrite(struct buf *b)
 
 // Release a locked buffer.
 // Move to the head of the MRU list.
-void
-brelse(struct buf *b)
+void brelse(struct buf *b)
 {
-  if(!holdingsleep(&b->lock))
+  if (!holdingsleep(&b->lock))
     panic("brelse");
 
   releasesleep(&b->lock);
 
   acquire(&bcache.lock);
   b->refcnt--;
-  if (b->refcnt == 0) {
+  if (b->refcnt == 0)
+  {
     // no one is waiting for it.
     b->next->prev = b->prev;
     b->prev->next = b->next;
@@ -136,9 +157,8 @@ brelse(struct buf *b)
     bcache.head.next->prev = b;
     bcache.head.next = b;
   }
-  
+
   release(&bcache.lock);
 }
-//PAGEBREAK!
-// Blank page.
-
+// PAGEBREAK!
+//  Blank page.

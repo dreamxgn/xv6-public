@@ -8,8 +8,8 @@
 
 .globl swtch
 swtch:
-  movl 4(%esp), %eax
-  movl 8(%esp), %edx
+  movl 4(%esp), %eax #被切换出去的当前的context
+  movl 8(%esp), %edx #要切换进入的context
 
   # Save old callee-saved registers
   pushl %ebp

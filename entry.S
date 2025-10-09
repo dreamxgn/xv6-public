@@ -24,7 +24,7 @@
 #include "param.h"
 
 # Multiboot header.  Data to direct multiboot loader.
-.p2align 2
+.p2align 2 # 4字节对齐
 .text
 .globl multiboot_header
 multiboot_header:
@@ -41,6 +41,7 @@ multiboot_header:
 _start = V2P_WO(entry)
 
 # Entering xv6 on boot processor, with paging off.
+# 启用分页并跳转到main函数,bootstrap 核心由此开始执行。
 .globl entry
 entry:
   # Turn on page size extension for 4Mbyte pages
@@ -48,6 +49,9 @@ entry:
   orl     $(CR4_PSE), %eax
   movl    %eax, %cr4
   # Set page directory
+  # 映射物理地址 0x0 0x400000 到 虚拟地址 0x0 0x400000 
+  # 映射虚拟地址 0x80000000(KERNBASE) 0x400000 到 物理地址 0x0 0x400000
+  # 4MB页面大小,使用大页4MB。
   movl    $(V2P_WO(entrypgdir)), %eax
   movl    %eax, %cr3
   # Turn on paging.
@@ -62,7 +66,10 @@ entry:
   # high addresses. The indirect call is needed because
   # the assembler produces a PC-relative instruction
   # for a direct jump.
-  mov $main, %eax
-  jmp *%eax
+  #mov $main, %eax
+  #jmp *%eax
+  mov $main,%eax
+  push $0x8000
+  call *%eax
 
-.comm stack, KSTACKSIZE
+.comm stack, KSTACKSIZE #该地址以下的内存不会被使用，所以可以用作栈。

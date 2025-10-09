@@ -5,7 +5,7 @@
   .globl name; \
   name: \
     movl $SYS_ ## name, %eax; \
-    int $T_SYSCALL; \
+    int $T_SYSCALL;\
     ret
 
 SYSCALL(fork)
