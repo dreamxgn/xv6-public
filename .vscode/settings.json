@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    ".fantomasignore": "ignore",
+    "x86.h": "c",
+    "alltext": "c",
+    "string.h": "c",
+    "fs.h": "c",
+    "stat.h": "c",
+    "user.h": "c"
+  }
+}

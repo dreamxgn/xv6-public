@@ -1,0 +1,61 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Xv6 Debug via QEMU",
+      "type": "cppdbg",
+      "request": "launch", // 注意：用 launch 而不是 attach
+      "program": "${workspaceFolder}/kernel", // 用来加载符号
+      "miDebuggerServerAddress": "localhost:26000", // QEMU 的 GDB stub 地址
+      "miDebuggerPath": "/usr/bin/gdb", // 本地 gdb 路径
+      "cwd": "${workspaceFolder}",
+      "targetArchitecture": "x86",
+      "stopAtEntry": true,
+      "stopAtConnect": false, // 在连接时立即停住（可选）
+      "externalConsole": true,
+      "setupCommands": [
+        { "text": "symbol-file ${workspaceFolder}/kernel" },
+        { "text": "add-symbol-file ${workspaceFolder}/bootblock.o 0x7c00" },
+        { "text": "add-symbol-file ${workspaceFolder}/entry.o 0x100000" },
+        { "text": "add-symbol-file ${workspaceFolder}/entryother.o 0x7000" },
+        { "text": "add-symbol-file ${workspaceFolder}/initcode.o 0x0" },
+        { "text": "set print pretty on" },
+        { "text": "set output-radix 16" }
+      ]
+    },
+    {
+      "name": "Debug Mkfs",
+      "type": "cppdbg",
+      "request": "launch", // 注意：用 launch 而不是 attach
+      "program": "${workspaceFolder}/mkfs", // 用来加载符号
+      "miDebuggerPath": "/usr/bin/gdb", // 本地 gdb 路径
+      "cwd": "${workspaceFolder}",
+      "targetArchitecture": "x86",
+      "stopAtEntry": true,
+      "args": [
+        "fs.img",
+        "README",
+        "_cat",
+        "_echo",
+        "_forktest",
+        "_grep",
+        "_init",
+        "_kill",
+        "_ln",
+        "_ls",
+        "_mkdir",
+        "_rm",
+        "_sh",
+        "_stressfs",
+        "_usertests",
+        "_wc",
+        "_zombie"
+      ],
+      "setupCommands": [
+        { "text": "symbol-file ${workspaceFolder}/mkfs" },
+        { "text": "set print pretty on" },
+        { "text": "set output-radix 16" }
+      ]
+    }
+  ]
+}
