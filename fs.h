@@ -12,13 +12,13 @@
 // super block describes the disk layout:
 struct superblock
 {
-  uint size;       // Size of file system image (blocks) 文件系统总的blocks数量
+  uint size;       // Size of file system image (blocks) 文件系统总的块数量
   uint nblocks;    // Number of data blocks 数据块的数量
   uint ninodes;    // Number of inodes. inodes数量
-  uint nlog;       // Number of log blocks 存储事务日志块的数量
+  uint nlog;       // Number of log blocks 日志块数量
   uint logstart;   // Block number of first log block 日志块的起始块号
-  uint inodestart; // Block number of first inode block inode块的起始块号
-  uint bmapstart;  // Block number of first free map block 存储空闲块的起始块号
+  uint inodestart; // Block number of first inode block 第一个inode的起始块号
+  uint bmapstart;  // Block number of first free map block 用于记录块空闲情况(已使用/未使用)的起始块号
 };
 
 #define NDIRECT 12

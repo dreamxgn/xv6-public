@@ -27,11 +27,11 @@
 // Disk layout:
 // [ boot block | sb block | log | inode blocks | free bit map | data blocks ]
 
-int nbitmap = FSSIZE / (BSIZE * 8) + 1; // bitmap的块大小
+int nbitmap = FSSIZE / (BSIZE * 8) + 1; // bitmap的块大小,用于表示文件系统内所有块的分配情况(已分配/可用)
 int ninodeblocks = NINODES / IPB + 1;   // 文件系统管理 inode需要多少块
-int nlog = LOGSIZE;                     // 磁盘事务个块的日志
-int nmeta;                              // Number of meta blocks (boot, sb, nlog, inode, bitmap)
-int nblocks;                            // Number of data blocks
+int nlog = LOGSIZE;                     // 日志块的数量
+int nmeta;                              // Number of meta blocks (boot, sb, nlog, inode, bitmap) 文件系统元数据块数量
+int nblocks;                            // Number of data blocks 文件系统数据块数量
 
 int fsfd;
 struct superblock sb;
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 
   // 1 fs block = 1 disk sector
   nmeta = 2 + nlog + ninodeblocks + nbitmap;
-  nblocks = FSSIZE - nmeta; // 文件系统可用的块数
+  nblocks = FSSIZE - nmeta; // 文件系统可以用作数据块的数量
 
   sb.size = xint(FSSIZE);
   sb.nblocks = xint(nblocks);

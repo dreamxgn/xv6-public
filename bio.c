@@ -28,8 +28,8 @@
 
 struct
 {
-  struct spinlock lock;
-  struct buf buf[NBUF];
+  struct spinlock lock; // 保护分配块缓存数据的锁
+  struct buf buf[NBUF]; // 缓存块
 
   // Linked list of all buffers, through prev/next.
   // head.next is most recently used.
@@ -105,7 +105,7 @@ bget(uint dev, uint blockno)
 
 // Return a locked buf with the contents of the indicated block.
 /*
- * 从磁盘读取指定块到缓冲区
+ * 返回块的缓冲区，尝试从块缓存中获取该块的缓存项，如果该缓存项不存在，则创建一个并从磁盘读取块内容。
  * @param dev: 设备号
  * @param blockno: 块号
  * @return: 指向包含数据的缓冲区结构体指针

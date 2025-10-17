@@ -6,6 +6,9 @@
     "string.h": "c",
     "fs.h": "c",
     "stat.h": "c",
-    "user.h": "c"
+    "user.h": "c",
+    "fcntl.h": "c",
+    "strings.h": "c",
+    "unistd.h": "c"
   }
 }

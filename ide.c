@@ -92,7 +92,9 @@ idestart(struct buf *b)
   outb(0x1f3, sector & 0xff);
   outb(0x1f4, (sector >> 8) & 0xff);
   outb(0x1f5, (sector >> 16) & 0xff);
-  outb(0x1f6, 0xe0 | ((b->dev & 1) << 4) | ((sector >> 24) & 0x0f));
+  outb(0x1f6, 0xe0 | ((b->dev & 1) << 4) | ((sector >> 24) & 0x0f)); // LBA模式 选择1号磁盘 address 高4位
+
+  // B_DIRTY 表示块已脏了，则写入磁盘
   if (b->flags & B_DIRTY)
   {
     outb(0x1f7, write_cmd);
