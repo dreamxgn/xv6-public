@@ -1,8 +1,8 @@
 // On-disk file system format.
 // Both the kernel and user programs use this header file.
 
-#define ROOTINO 1 // root i-number
-#define BSIZE 512 // block size
+#define ROOTINO 1 // root i-number 根目录inode编号
+#define BSIZE 512 // block size 数据块的大小
 
 // Disk layout:
 // [ boot block | super block | log | inode blocks |
@@ -21,14 +21,14 @@ struct superblock
   uint bmapstart;  // Block number of first free map block 用于记录块空闲情况(已使用/未使用)的起始块号
 };
 
-#define NDIRECT 12
-#define NINDIRECT (BSIZE / sizeof(uint))
-#define MAXFILE (NDIRECT + NINDIRECT)
+#define NDIRECT 12 //直接块的数量
+#define NINDIRECT (BSIZE / sizeof(uint)) // 间接块的数量
+#define MAXFILE (NDIRECT + NINDIRECT) // 文件最多可以包含的数据块数量
 
 // On-disk inode structure
 struct dinode
 {
-  short type;              // File type
+  short type;              // File type 0表示空闲inode
   short major;             // Major device number (T_DEV only)
   short minor;             // Minor device number (T_DEV only)
   short nlink;             // Number of links to inode in file system
@@ -51,8 +51,9 @@ struct dinode
 // Directory is a file containing a sequence of dirent structures.
 #define DIRSIZ 14
 
+//目录中每一项的结构(目录项)
 struct dirent
 {
-  ushort inum;
-  char name[DIRSIZ];
+  ushort inum; //目录项关联的inode编号
+  char name[DIRSIZ]; //目录项的名称
 };

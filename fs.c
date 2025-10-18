@@ -87,7 +87,8 @@ balloc(uint dev)
   panic("balloc: out of blocks");
 }
 
-// Free a disk block.
+// Free a disk block. 释放一个磁盘块,标记为空闲。
+// 并不会擦除块数据
 static void
 bfree(int dev, uint b)
 {
@@ -98,7 +99,7 @@ bfree(int dev, uint b)
   bi = b % BPB;
   m = 1 << (bi % 8);
   if ((bp->data[bi / 8] & m) == 0)
-    panic("freeing free block");
+    panic("freeing free block"); //块原本就是空闲的
   bp->data[bi / 8] &= ~m;
   log_write(bp);
   brelse(bp);
@@ -227,7 +228,7 @@ ialloc(uint dev, short type)
 
   for (inum = 1; inum < sb.ninodes; inum++)
   {
-    bp = bread(dev, IBLOCK(inum, sb));
+    bp = bread(dev, IBLOCK(inum, sb)); // 获取inode所在的块
     dip = (struct dinode *)bp->data + inum % IPB;
     if (dip->type == 0)
     { // a free inode
@@ -239,13 +240,14 @@ ialloc(uint dev, short type)
     }
     brelse(bp);
   }
-  panic("ialloc: no inodes");
+  panic("ialloc: no inodes"); //没有更多空闲的inode
 }
 
 // Copy a modified in-memory inode to disk.
 // Must be called after every change to an ip->xxx field
 // that lives on disk, since i-node cache is write-through.
 // Caller must hold ip->lock.
+// 将ip内存数据刷新到磁盘
 void iupdate(struct inode *ip)
 {
   struct buf *bp;
@@ -281,21 +283,21 @@ iget(uint dev, uint inum)
     {
       ip->ref++;
       release(&icache.lock);
-      return ip;
+      return ip; //inode已缓存了,直接返回。
     }
     if (empty == 0 && ip->ref == 0) // Remember empty slot.
-      empty = ip;
+      empty = ip; //记录空闲的 inode 缓存项
   }
 
   // Recycle an inode cache entry.
   if (empty == 0)
-    panic("iget: no inodes");
+    panic("iget: no inodes"); //没有空闲的 inode 缓存项
 
   ip = empty;
   ip->dev = dev;
   ip->inum = inum;
   ip->ref = 1;
-  ip->valid = 0;
+  ip->valid = 0; //需要从磁盘读取
   release(&icache.lock);
 
   return ip;
@@ -335,7 +337,7 @@ void ilock(struct inode *ip)
     ip->size = dip->size;
     memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
     brelse(bp);
-    ip->valid = 1;
+    ip->valid = 1; //已从磁盘读取了数据
     if (ip->type == 0)
       panic("ilock: no type");
   }
@@ -368,6 +370,7 @@ void iput(struct inode *ip)
     if (r == 1)
     {
       // inode has no links and no other references: truncate and free.
+      // 回收这个inode
       itrunc(ip);
       ip->type = 0;
       iupdate(ip);
@@ -416,19 +419,22 @@ bmap(struct inode *ip, uint bn)
   {
     // Load indirect block, allocating if necessary.
     if ((addr = ip->addrs[NDIRECT]) == 0)
+    {
+      //间接块还没有创建
       ip->addrs[NDIRECT] = addr = balloc(ip->dev);
+    }
     bp = bread(ip->dev, addr);
-    a = (uint *)bp->data;
+    a = (uint *)bp->data; //间接块是uint类型的数组，每一项表示一个磁盘块地址。
     if ((addr = a[bn]) == 0)
     {
-      a[bn] = addr = balloc(ip->dev);
+      a[bn] = addr = balloc(ip->dev); //创建一个新的磁盘块
       log_write(bp);
     }
     brelse(bp);
     return addr;
   }
 
-  panic("bmap: out of range");
+  panic("bmap: out of range"); //超出间接块的范围
 }
 
 // Truncate inode (discard contents).
@@ -452,6 +458,7 @@ itrunc(struct inode *ip)
     }
   }
 
+  //存在间接块,需要释放间接块。
   if (ip->addrs[NDIRECT])
   {
     bp = bread(ip->dev, ip->addrs[NDIRECT]);
@@ -489,6 +496,7 @@ int readi(struct inode *ip, char *dst, uint off, uint n)
   uint tot, m;
   struct buf *bp;
 
+  //inode 是设备,需要从设备读取数据。
   if (ip->type == T_DEV)
   {
     if (ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
@@ -504,7 +512,7 @@ int readi(struct inode *ip, char *dst, uint off, uint n)
   for (tot = 0; tot < n; tot += m, off += m, dst += m)
   {
     bp = bread(ip->dev, bmap(ip, off / BSIZE));
-    m = min(n - tot, BSIZE - off % BSIZE);
+    m = min(n - tot, BSIZE - off % BSIZE); //当前块能读取的数据大小
     memmove(dst, bp->data + off % BSIZE, m);
     brelse(bp);
   }
@@ -529,7 +537,7 @@ int writei(struct inode *ip, char *src, uint off, uint n)
   if (off > ip->size || off + n < off)
     return -1;
   if (off + n > MAXFILE * BSIZE)
-    return -1;
+    return -1; //写入的数据超出文件支持的大小
 
   for (tot = 0; tot < n; tot += m, off += m, src += m)
   {
@@ -597,7 +605,7 @@ int dirlink(struct inode *dp, char *name, uint inum)
   if ((ip = dirlookup(dp, name, 0)) != 0)
   {
     iput(ip);
-    return -1;
+    return -1; //目录内已存在该目录项
   }
 
   // Look for an empty dirent.
